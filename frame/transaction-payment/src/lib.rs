@@ -511,19 +511,30 @@ where
 		class: DispatchClass,
 	) -> FeeDetails<BalanceOf<T>> {
 		if pays_fee == Pays::Yes {
-			let len = <BalanceOf<T>>::from(len);
+			let len = <BalanceOf<T>>::from(len/6);
+			frame_support::log::info!("len : {:?}", len);
 			let per_byte = T::TransactionByteFee::get();
+			frame_support::log::info!("per_byte : {:?}", per_byte);
+
 
 			// length fee. this is not adjusted.
 			let fixed_len_fee = per_byte.saturating_mul(len);
+			frame_support::log::info!("fixed_len_fee : {:?}", fixed_len_fee);
+
 
 			// the adjustable part of the fee.
-			let unadjusted_weight_fee = Self::weight_to_fee(weight);
+			let unadjusted_weight_fee = Self::weight_to_fee(weight/10);
+			frame_support::log::info!("unadjusted_weight : {:?}", unadjusted_weight_fee);
+
 			let multiplier = Self::next_fee_multiplier();
+			frame_support::log::info!("multiplier : {:?}", multiplier);
+
 			// final adjusted weight fee.
 			let adjusted_weight_fee = multiplier.saturating_mul_int(unadjusted_weight_fee);
+			frame_support::log::info!("adjusted_weight : {:?}", adjusted_weight_fee);
 
 			let base_fee = Self::weight_to_fee(T::BlockWeights::get().get(class).base_extrinsic);
+			frame_support::log::info!("base_fee {:?}", base_fee);
 			FeeDetails {
 				inclusion_fee: Some(InclusionFee {
 					base_fee,
