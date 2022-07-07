@@ -70,6 +70,12 @@ pub struct BenchKeyring {
 	accounts: BTreeMap<AccountId, BenchPair>,
 }
 
+macro_rules! bvec {
+	($( $x:tt )*) => {
+		vec![$( $x )*].try_into().unwrap()
+	}
+}
+
 #[derive(Clone)]
 enum BenchPair {
 	Sr25519(sr25519::Pair),
@@ -312,6 +318,7 @@ impl<'a> Iterator for BlockContentIterator<'a> {
 						Call::Balances(BalancesCall::transfer_keep_alive {
 							dest: sp_runtime::MultiAddress::Id(receiver),
 							value: node_runtime::ExistentialDeposit::get() + 1,
+							// memo: bvec![0u8; 20],
 						}),
 					BlockType::RandomTransfersReaping => {
 						Call::Balances(BalancesCall::transfer {

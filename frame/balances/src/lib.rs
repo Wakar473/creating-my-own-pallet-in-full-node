@@ -181,7 +181,7 @@ use frame_system as system;
 use scale_info::TypeInfo;
 use sp_runtime::{
 	traits::{
-		AtLeast32BitUnsigned, Bounded, CheckedAdd, CheckedSub, MaybeSerializeDeserialize,
+		AtLeast32BitUnsigned, Bounded,CheckedAdd, CheckedSub, MaybeSerializeDeserialize,
 		Saturating, StaticLookup, Zero,
 	},
 	ArithmeticError, DispatchError, RuntimeDebug,
@@ -220,10 +220,6 @@ pub mod pallet {
 		/// The minimum amount required to keep an account open.
 		#[pallet::constant]
 		type ExistentialDeposit: Get<Self::Balance>;
-
-		/// The maximum length of a memo stored on-chain.
-		// #[pallet::constant]
-		// type StringLimit: Get<u64>;
 
 		/// The means of storing the balances of an account.
 		type AccountStore: StoredMap<Self::AccountId, AccountData<Self::Balance>>;
@@ -378,15 +374,25 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			dest: <T::Lookup as StaticLookup>::Source,
 			#[pallet::compact] value: T::Balance,
-			// memo: Vec<u8>,
 		) -> DispatchResultWithPostInfo {
 			let transactor = ensure_signed(origin)?;
 			let dest = T::Lookup::lookup(dest)?;
 
-			// let _enter_memo: BoundedVec<u8, T::StringLimit> =
-			// memo.clone().try_into().map_err(|_| Error::<T, I>::NotValid)?;
-
 			<Self as Currency<_>>::transfer(&transactor, &dest, value, KeepAlive)?;
+			Ok(().into())
+		}
+
+		#[pallet::weight(T::WeightInfo::transfer_with_memo())]
+		 pub fn transfer_with_memo(
+			origin: OriginFor<T>,
+			dest: <T::Lookup as StaticLookup>::Source,
+			#[pallet::compact] value: T::Balance,
+			memo: Vec<u8>,
+		) -> DispatchResultWithPostInfo {
+			let transactor = ensure_signed(origin)?;
+			let dest = T::Lookup::lookup(dest)?;
+
+			<Self as Currency<_>>::transfer_with_memo(&transactor, &dest, value, memo, KeepAlive)?;
 			Ok(().into())
 		}
 
@@ -451,6 +457,8 @@ pub mod pallet {
 		/// An account was removed whose balance was non-zero but below ExistentialDeposit,
 		/// resulting in an outright loss.
 		DustLost { account: T::AccountId, amount: T::Balance },
+		///Transfer with memo succeeded
+		TransferWithMemo { from: T::AccountId, to: T::AccountId, amount: T::Balance, memo: Vec<u8> },
 		/// Transfer succeeded.
 		Transfer { from: T::AccountId, to: T::AccountId, amount: T::Balance },
 		/// A balance was set by root.
@@ -498,6 +506,7 @@ pub mod pallet {
 		/// Number of named reserves exceed MaxReserves
 		TooManyReserves,
 		VeryLessAmount,
+		NotValid,
 	}
 
 	/// The total units issued in the system.
@@ -1539,6 +1548,72 @@ where
 		Ok(())
 	}
 
+	fn transfer_with_memo(
+		transactor: &T::AccountId,
+		dest: &T::AccountId,
+		value: Self::Balance,
+		memo: Vec<u8>,
+		existence_requirement: ExistenceRequirement,
+	) -> DispatchResult {
+        if value.is_zero() || transactor == dest {
+			return Ok(())
+		}
+
+		Self::try_mutate_account_with_dust(
+			dest,
+			|to_account, _| -> Result<DustCleaner<T, I>, DispatchError> {
+				Self::try_mutate_account_with_dust(
+					transactor,
+					|from_account, _| -> DispatchResult {
+						from_account.free = from_account
+							.free
+							.checked_sub(&value)
+							.ok_or(Error::<T, I>::InsufficientBalance)?;
+
+						// NOTE: total stake being stored in the same type means that this could
+						// never overflow but better to be safe than sorry.
+						to_account.free =
+							to_account.free.checked_add(&value).ok_or(ArithmeticError::Overflow)?;
+
+						let ed = T::ExistentialDeposit::get();
+						ensure!(to_account.total() >= ed, Error::<T, I>::ExistentialDeposit);
+
+						Self::ensure_can_withdraw(
+							transactor,
+							value,
+							WithdrawReasons::TRANSFER,
+							from_account.free,
+						)
+						.map_err(|_| Error::<T, I>::LiquidityRestrictions)?;
+
+						// TODO: This is over-conservative. There may now be other providers, and
+						// this pallet   may not even be a provider.
+						let allow_death = existence_requirement == ExistenceRequirement::AllowDeath;
+						let allow_death =
+							allow_death && system::Pallet::<T>::can_dec_provider(transactor);
+						ensure!(
+							allow_death || from_account.total() >= ed,
+							Error::<T, I>::KeepAlive
+						);
+
+						Ok(())
+					},
+				)
+				.map(|(_, maybe_dust_cleaner)| maybe_dust_cleaner)
+			},
+		)?;
+
+		// Emit transfer event.
+		Self::deposit_event(Event::TransferWithMemo {
+			from: transactor.clone(),
+			to: dest.clone(),
+			amount: value,
+			memo,
+		});
+
+		Ok(())
+    }
+
 	/// Slash a target account `who`, returning the negative imbalance created and any left over
 	/// amount that could not be slashed.
 	///
@@ -1742,6 +1817,7 @@ where
 		)
 		.unwrap_or_else(|_| SignedImbalance::Positive(Self::PositiveImbalance::zero()))
 	}
+
 }
 
 impl<T: Config<I>, I: 'static> ReservableCurrency<T::AccountId> for Pallet<T, I>

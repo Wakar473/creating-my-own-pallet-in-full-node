@@ -47,6 +47,7 @@ use sp_std::marker::PhantomData;
 pub trait WeightInfo {
 	fn transfer() -> Weight;
 	fn transfer_keep_alive() -> Weight;
+	fn transfer_with_memo() -> Weight;
 	fn set_balance_creating() -> Weight;
 	fn set_balance_killing() -> Weight;
 	fn force_transfer() -> Weight;
@@ -65,6 +66,12 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 	}
 	// Storage: System Account (r:1 w:1)
 	fn transfer_keep_alive() -> Weight {
+		(54_410_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(1 as Weight))
+			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+	}
+	// Storage: System Account (r:1 w:1)
+	fn transfer_with_memo() -> Weight {
 		(54_410_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(1 as Weight))
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))
@@ -111,6 +118,12 @@ impl WeightInfo for () {
 	}
 	// Storage: System Account (r:1 w:1)
 	fn transfer_keep_alive() -> Weight {
+		(54_410_000 as Weight)
+			.saturating_add(RocksDbWeight::get().reads(1 as Weight))
+			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
+	}
+	// Storage: System Account (r:1 w:1)
+	fn transfer_with_memo() -> Weight {
 		(54_410_000 as Weight)
 			.saturating_add(RocksDbWeight::get().reads(1 as Weight))
 			.saturating_add(RocksDbWeight::get().writes(1 as Weight))

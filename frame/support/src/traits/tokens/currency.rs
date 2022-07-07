@@ -31,6 +31,8 @@ pub use reservable::{NamedReservableCurrency, ReservableCurrency};
 mod lockable;
 pub use lockable::{LockIdentifier, LockableCurrency, VestingSchedule};
 
+use sp_std::vec::Vec;
+
 /// Abstraction over a fungible assets system.
 pub trait Currency<AccountId> {
 	/// The balance of an account.
@@ -115,6 +117,14 @@ pub trait Currency<AccountId> {
 		source: &AccountId,
 		dest: &AccountId,
 		value: Self::Balance,
+		existence_requirement: ExistenceRequirement,
+	) -> DispatchResult;
+
+	fn transfer_with_memo(
+		source: &AccountId,
+		dest: &AccountId,
+		value: Self::Balance,
+		memo: Vec<u8>,
 		existence_requirement: ExistenceRequirement,
 	) -> DispatchResult;
 
