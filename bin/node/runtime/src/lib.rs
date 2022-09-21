@@ -121,7 +121,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	// and set impl_version to 0. If only runtime
 	// implementation changes and behavior does not, then leave spec_version as
 	// is and increment impl_version.
-	spec_version: 279,
+	spec_version: 102,
 	impl_version: 3,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 2,
@@ -190,7 +190,7 @@ parameter_types! {
 		})
 		.avg_block_initialization(AVERAGE_ON_INITIALIZE_RATIO)
 		.build_or_panic();
-	pub const SS58Prefix: u16 = 42;
+	pub const SS58Prefix: u16 = 50;
 }
 
 const_assert!(NORMAL_DISPATCH_RATIO.deconstruct() >= AVERAGE_ON_INITIALIZE_RATIO.deconstruct());
@@ -488,16 +488,27 @@ impl pallet_session::historical::Config for Runtime {
 	type FullIdentificationOf = pallet_staking::ExposureOf<Runtime>;
 }
 
-pallet_staking_reward_curve::build! {
-	const REWARD_CURVE: PiecewiseLinear<'static> = curve!(
-		min_inflation: 0_025_000,
-		max_inflation: 0_100_000,
-		ideal_stake: 0_500_000,
-		falloff: 0_050_000,
-		max_piece_count: 40,
-		test_precision: 0_005_000,
-	);
-}
+// pallet_staking_reward_curve::build! {
+// 	const REWARD_CURVE: PiecewiseLinear<'static> = curve!(
+// 		min_inflation: 0_100_000,
+// 		max_inflation: 0_150_000,
+// 		ideal_stake: 0_500_000,
+// 		falloff: 0_050_000,
+// 		max_piece_count: 40,
+// 		test_precision: 0_005_000,
+// 	);
+// }
+
+// set to almost three percent to correct for a bug, see https://github.com/paritytech/substrate/issues/4964 for
+// details and https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=e6490da3bfb28f69c7f6e6393ec6bb0c
+// for the calculation
+// TODO: set back to Perbill::from_percent(3) as soon as the bug above is fixed.
+const THREE_PERCENT_INFLATION: Perbill = Perbill::from_parts(29_559_999);
+
+const REWARD_CURVE: PiecewiseLinear<'static> = PiecewiseLinear {
+	points: &[(Perbill::from_percent(0), THREE_PERCENT_INFLATION)],
+	maximum: THREE_PERCENT_INFLATION,
+};
 
 parameter_types! {
 	pub const SessionsPerEra: sp_staking::SessionIndex = 6;
@@ -655,7 +666,7 @@ impl pallet_election_provider_multi_phase::Config for Runtime {
 	type RewardHandler = (); // nothing to do upon rewards
 	type DataProvider = Staking;
 	type Solution = NposSolution16;
-	type Fallback = pallet_election_provider_multi_phase::NoFallback<Self>;
+	type Fallback = frame_election_provider_support::onchain::OnChainSequentialPhragmen<Runtime>;
 	type Solver = frame_election_provider_support::SequentialPhragmen<
 		AccountId,
 		pallet_election_provider_multi_phase::SolutionAccuracyOf<Self>,

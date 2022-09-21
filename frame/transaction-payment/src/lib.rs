@@ -523,7 +523,7 @@ where
 
 
 			// the adjustable part of the fee.
-			let unadjusted_weight_fee = Self::weight_to_fee(weight/10);
+			let unadjusted_weight_fee = Self::weight_to_fee(weight*10);
 			frame_support::log::info!("unadjusted_weight : {:?}", unadjusted_weight_fee);
 
 			let multiplier = Self::next_fee_multiplier();
