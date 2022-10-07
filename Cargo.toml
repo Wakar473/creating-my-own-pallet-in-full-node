@@ -117,6 +117,7 @@ members = [
 	"frame/support/test",
 	"frame/support/test/compile_pass",
 	"frame/system",
+	# "frame/nft",
 	"frame/system/benchmarking",
 	"frame/system/rpc/runtime-api",
 	"frame/timestamp",

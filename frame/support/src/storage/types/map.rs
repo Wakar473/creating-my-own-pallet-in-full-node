@@ -142,6 +142,7 @@ where
 	pub fn insert<KeyArg: EncodeLike<Key>, ValArg: EncodeLike<Value>>(key: KeyArg, val: ValArg) {
 		<Self as crate::storage::StorageMap<Key, Value>>::insert(key, val)
 	}
+	
 
 	/// Remove the value under a key.
 	pub fn remove<KeyArg: EncodeLike<Key>>(key: KeyArg) {

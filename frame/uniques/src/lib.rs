@@ -798,16 +798,17 @@ pub mod pallet {
 				.map(|_| None)
 				.or_else(|origin| ensure_signed(origin).map(Some).map_err(DispatchError::from))?;
 
-			let delegate = T::Lookup::lookup(delegate)?;
-
-			let class_details = Class::<T, I>::get(&class).ok_or(Error::<T, I>::Unknown)?;
-			let mut details =
+				let delegate = T::Lookup::lookup(delegate)?;
+				
+				let class_details = Class::<T, I>::get(&class).ok_or(Error::<T, I>::Unknown)?;
+				let mut details =
 				Asset::<T, I>::get(&class, &instance).ok_or(Error::<T, I>::Unknown)?;
+				
+				if let Some(check) = maybe_check {
+					let permitted = &check == &class_details.admin || &check == &details.owner;
+					ensure!(permitted, Error::<T, I>::NoPermission);
+				}
 
-			if let Some(check) = maybe_check {
-				let permitted = &check == &class_details.admin || &check == &details.owner;
-				ensure!(permitted, Error::<T, I>::NoPermission);
-			}
 
 			details.approved = Some(delegate);
 			Asset::<T, I>::insert(&class, &instance, &details);

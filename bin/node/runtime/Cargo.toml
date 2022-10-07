@@ -92,6 +92,8 @@ pallet-sudo = { version = "4.0.0-dev", default-features = false, path = "../../.
 pallet-timestamp = { version = "4.0.0-dev", default-features = false, path = "../../../frame/timestamp" }
 pallet-tips = { version = "4.0.0-dev", default-features = false, path = "../../../frame/tips" }
 pallet-treasury = { version = "4.0.0-dev", default-features = false, path = "../../../frame/treasury" }
+pallet-nft = { version = "4.0.0-dev", default-features = false, path = "../../../frame/nft" }
+
 pallet-utility = { version = "4.0.0-dev", default-features = false, path = "../../../frame/utility" }
 pallet-transaction-payment = { version = "4.0.0-dev", default-features = false, path = "../../../frame/transaction-payment" }
 pallet-transaction-payment-rpc-runtime-api = { version = "4.0.0-dev", default-features = false, path = "../../../frame/transaction-payment/rpc/runtime-api/" }
@@ -159,6 +161,7 @@ std = [
 	"pallet-election-provider-multi-phase/std",
 	"pallet-timestamp/std",
 	"pallet-tips/std",
+	"pallet-nft/std",
 	"pallet-transaction-payment-rpc-runtime-api/std",
 	"pallet-transaction-payment/std",
 	"pallet-transaction-storage/std",
